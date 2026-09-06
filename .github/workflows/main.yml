@@ -1,0 +1,54 @@
+name: Build Golf Rival Auto Aim APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Find and extract project ZIP
+        run: |
+          mkdir build-src
+          ZIP=$(find . -maxdepth 2 -type f -name "Golf_Rival_Auto_Aim_GitHub_Builder.zip" | head -1)
+          if [ -z "$ZIP" ]; then
+            echo "Project ZIP not found"
+            exit 1
+          fi
+          unzip -q "$ZIP" -d build-src
+          find build-src -maxdepth 3 -type f | head -30
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Install Gradle
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-8.11.1-bin.zip
+          unzip -q gradle-8.11.1-bin.zip
+          echo "$PWD/gradle-8.11.1/bin" >> $GITHUB_PATH
+
+      - name: Build APK
+        run: |
+          cd build-src/GolfRivalAutoAim
+          gradle --no-daemon :app:assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Golf-Rival-Auto-Aim-APK
+          path: build-src/GolfRivalAutoAim/app/build/outputs/apk/debug/app-debug.apk
